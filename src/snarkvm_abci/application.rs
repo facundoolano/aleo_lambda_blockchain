@@ -244,8 +244,8 @@ impl SnarkVMApp {
 
     /// Add the tranasction output records as unspent in the record store.
     fn add_output_records(&self, transaction: &Transaction) -> Result<()> {
-        if let Transaction::Execution { ref execution, .. } = transaction {
-            execution
+        if let Transaction::Execution { ref transition, .. } = transaction {
+            transition
                 .output_records()
                 .map(|(commitment, record)| self.records.add(*commitment, record.clone()))
                 .find(|result| result.is_err())
@@ -266,13 +266,16 @@ impl SnarkVMApp {
                 );
                 vm::verify_deployment(deployment, rng)
             }
-            Transaction::Execution { ref execution, .. } => {
-                let stored_keys = self.programs.get(execution.program_id())?;
+            Transaction::Execution { ref transition, .. } => {
+                let stored_keys = self.programs.get(transition.program_id())?;
                 // only verify if we have the program available
                 if let Some((_program, keys)) = stored_keys {
-                    vm::verify_execution(execution, &keys)
+                    vm::verify_execution(transition, &keys)
                 } else {
-                    bail!(format!("Program {} does not exist", execution.program_id()))
+                    bail!(format!(
+                        "Program {} does not exist",
+                        transition.program_id()
+                    ))
                 }
             }
         };

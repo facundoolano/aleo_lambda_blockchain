@@ -46,7 +46,11 @@ fn basic_program() {
     let transaction: Transaction = parse_output(result.unwrap());
 
     // check the output of the execution is the sum of the inputs
-    if let Transaction::Execution { execution, .. } = transaction {
+    if let Transaction::Execution {
+        transition: execution,
+        ..
+    } = transaction
+    {
         let transition = execution.peek().unwrap();
         let output = transition.outputs();
 

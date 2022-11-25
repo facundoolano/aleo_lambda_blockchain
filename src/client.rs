@@ -172,10 +172,7 @@ fn generate_execution(
     // using uuid here too for consistency, although in the case of Transaction::from_execution the additional fee is optional
     let id = uuid::Uuid::new_v4().to_string();
 
-    Ok(Transaction::Execution {
-        id,
-        execution: transition,
-    })
+    Ok(Transaction::Execution { id, transition })
 }
 
 async fn broadcast_to_blockchain(transaction: &Transaction, url: &str) -> Result<()> {
