@@ -21,8 +21,8 @@ pub type Deployment = snarkvm::prelude::Deployment<Testnet3>;
 pub type Value = snarkvm::prelude::Value<Testnet3>;
 pub type Program = snarkvm::prelude::Program<Testnet3>;
 pub type Ciphertext = snarkvm::prelude::Ciphertext<Testnet3>;
-pub type Execution = snarkvm::prelude::Execution<Testnet3>;
 pub type Record = snarkvm::prelude::Record<Testnet3, snarkvm::prelude::Plaintext<Testnet3>>;
+type Execution = snarkvm::prelude::Execution<Testnet3>;
 pub type EncryptedRecord = snarkvm::prelude::Record<Testnet3, Ciphertext>;
 pub type ViewKey = snarkvm::prelude::ViewKey<Testnet3>;
 pub type PrivateKey = snarkvm::prelude::PrivateKey<Testnet3>;
@@ -157,7 +157,7 @@ pub fn generate_execution(
     inputs: &[Value],
     private_key: &PrivateKey,
     rng: &mut ThreadRng,
-) -> Result<Execution> {
+) -> Result<Transition> {
     let program: Program = snarkvm::prelude::Program::from_str(program_string).unwrap();
     let program_id = program.id();
 
@@ -193,6 +193,6 @@ pub fn generate_execution(
         CallStack::execute(authorization, execution.clone())?,
         rng,
     )?;
-    let execution = execution.read().clone();
-    Ok(execution)
+    let mut execution = execution.read().clone();
+    execution.pop()
 }
