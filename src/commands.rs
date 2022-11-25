@@ -1,7 +1,7 @@
 use crate::account;
 use anyhow::Result;
 use clap::Parser;
-use lib::vm::{Address, EncryptedRecord, Identifier, Record, Value};
+use lib::vm::{EncryptedRecord, Identifier, Record, Value};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -15,13 +15,13 @@ pub enum Account {
     /// Fetches the records owned by the given account and calculates the final credits balance.
     Balance,
     /// Commits an execution transaction to send a determined amount of credits to another account.
-    Transfer {
-        /// Account to which the credits will be transferred.
-        #[clap(short, long)]
-        recipient_public_key: Address,
-        /// Amount of credits to transfer
-        #[clap(value_parser, short, long)]
-        credits: u64,
+    Credits {
+        /// The function name.
+        #[clap(value_parser)]
+        function: Identifier,
+        /// The function inputs.
+        #[clap(value_parser=parse_input_value)]
+        inputs: Vec<Value>,
     },
     Decrypt {
         /// Value to decrypt

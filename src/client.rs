@@ -17,6 +17,7 @@ mod commands;
 
 /// Default tendermint url
 const LOCAL_BLOCKCHAIN_URL: &str = "http://127.0.0.1:26657";
+const CREDITS_PATH: &str = "aleo/credits.aleo";
 
 #[derive(Debug, Parser)]
 #[clap()]
@@ -67,6 +68,14 @@ async fn run(command: Command, url: String) -> Result<String> {
         Command::Account(Account::New) => {
             let path = account::Credentials::new()?.save()?;
             format!("Saved credentials to {}", path.to_string_lossy())
+        }
+        Command::Account(Account::Credits { function, inputs }) => {
+            let path = &std::path::Path::new(CREDITS_PATH);
+            let credentials = account::Credentials::load().map_err(|_| anyhow!("credentials not found"))?;
+            let transaction = generate_execution(path, function, &inputs, &credentials)?;
+            broadcast_to_blockchain(&transaction, &url).await?;
+            transaction.json()
+
         }
         Command::Program(Program::Deploy { path }) => {
             let transaction = generate_deployment(&path)?;
