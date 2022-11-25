@@ -46,99 +46,95 @@ pub fn verify_execution(
     transition: &Transition,
     verifying_keys: &IndexMap<Identifier, (VerifyingKey, Certificate)>,
 ) -> Result<()> {
-    // Verify each transition.
-    // TODO add fee transition
-    let transitions = vec![transition.clone()];
-    for transition in transitions {
-        debug!(
-            "Verifying transition for {}/{}...",
-            transition.program_id(),
-            transition.function_name()
-        );
-        // Ensure an external execution isn't attempting to create credits
-        // The assumption at this point is that credits can only be created in the genesis block
-        // We may revisit if we add validator rewards, at which point some credits may be minted, although
-        // still not by external function calls
-        ensure!(
-            !Program::is_coinbase(transition.program_id(), transition.function_name()),
-            "Coinbase functions cannot be called"
-        );
-        // Ensure the transition ID is correct.
-        ensure!(
-            **transition.id() == transition.to_root()?,
-            "The transition ID is incorrect"
-        );
-        // Ensure the number of inputs is within the allowed range.
-        ensure!(
-            transition.inputs().len() <= Testnet3::MAX_INPUTS,
-            "Transition exceeded maximum number of inputs"
-        );
-        // Ensure the number of outputs is within the allowed range.
-        ensure!(
-            transition.outputs().len() <= Testnet3::MAX_INPUTS,
-            "Transition exceeded maximum number of outputs"
-        );
-        // Ensure each input is valid.
-        if transition
+    // TODO when there's a fee transition, we should do the same checks for it
+    debug!(
+        "Verifying transition for {}/{}...",
+        transition.program_id(),
+        transition.function_name()
+    );
+    // Ensure an external execution isn't attempting to create credits
+    // The assumption at this point is that credits can only be created in the genesis block
+    // We may revisit if we add validator rewards, at which point some credits may be minted, although
+    // still not by external function calls
+    ensure!(
+        !Program::is_coinbase(transition.program_id(), transition.function_name()),
+        "Coinbase functions cannot be called"
+    );
+    // Ensure the transition ID is correct.
+    ensure!(
+        **transition.id() == transition.to_root()?,
+        "The transition ID is incorrect"
+    );
+    // Ensure the number of inputs is within the allowed range.
+    ensure!(
+        transition.inputs().len() <= Testnet3::MAX_INPUTS,
+        "Transition exceeded maximum number of inputs"
+    );
+    // Ensure the number of outputs is within the allowed range.
+    ensure!(
+        transition.outputs().len() <= Testnet3::MAX_INPUTS,
+        "Transition exceeded maximum number of outputs"
+    );
+    // Ensure each input is valid.
+    if transition
+        .inputs()
+        .iter()
+        .enumerate()
+        .any(|(index, input)| !input.verify(transition.tcm(), index))
+    {
+        bail!("Failed to verify a transition input")
+    }
+    // Ensure each output is valid.
+    let num_inputs = transition.inputs().len();
+    if transition
+        .outputs()
+        .iter()
+        .enumerate()
+        .any(|(index, output)| !output.verify(transition.tcm(), num_inputs + index))
+    {
+        bail!("Failed to verify a transition output")
+    }
+    // Compute the x- and y-coordinate of `tpk`.
+    let (tpk_x, tpk_y) = transition.tpk().to_xy_coordinate();
+    // [Inputs] Construct the verifier inputs to verify the proof.
+    let mut inputs = vec![
+        <Testnet3 as Environment>::Field::one(),
+        *tpk_x,
+        *tpk_y,
+        **transition.tcm(),
+    ];
+    // [Inputs] Extend the verifier inputs with the input IDs.
+    inputs.extend(
+        transition
             .inputs()
             .iter()
-            .enumerate()
-            .any(|(index, input)| !input.verify(transition.tcm(), index))
-        {
-            bail!("Failed to verify a transition input")
-        }
-        // Ensure each output is valid.
-        let num_inputs = transition.inputs().len();
-        if transition
+            .flat_map(|input| input.verifier_inputs()),
+    );
+
+    // [Inputs] Extend the verifier inputs with the output IDs.
+    inputs.extend(
+        transition
             .outputs()
             .iter()
-            .enumerate()
-            .any(|(index, output)| !output.verify(transition.tcm(), num_inputs + index))
-        {
-            bail!("Failed to verify a transition output")
-        }
-        // Compute the x- and y-coordinate of `tpk`.
-        let (tpk_x, tpk_y) = transition.tpk().to_xy_coordinate();
-        // [Inputs] Construct the verifier inputs to verify the proof.
-        let mut inputs = vec![
-            <Testnet3 as Environment>::Field::one(),
-            *tpk_x,
-            *tpk_y,
-            **transition.tcm(),
-        ];
-        // [Inputs] Extend the verifier inputs with the input IDs.
-        inputs.extend(
-            transition
-                .inputs()
-                .iter()
-                .flat_map(|input| input.verifier_inputs()),
-        );
+            .flat_map(|output| output.verifier_inputs()),
+    );
+    // [Inputs] Extend the verifier inputs with the fee.
+    inputs.push(*I64::<Testnet3>::new(*transition.fee()).to_field()?);
+    debug!(
+        "Transition public inputs ({} elements): {:#?}",
+        inputs.len(),
+        inputs
+    );
 
-        // [Inputs] Extend the verifier inputs with the output IDs.
-        inputs.extend(
-            transition
-                .outputs()
-                .iter()
-                .flat_map(|output| output.verifier_inputs()),
-        );
-        // [Inputs] Extend the verifier inputs with the fee.
-        inputs.push(*I64::<Testnet3>::new(*transition.fee()).to_field()?);
-        debug!(
-            "Transition public inputs ({} elements): {:#?}",
-            inputs.len(),
-            inputs
-        );
-
-        // Retrieve the verifying key.
-        let (verifying_key, _) = verifying_keys
-            .get(transition.function_name())
-            .ok_or_else(|| anyhow!("missing verifying key"))?;
-        // Ensure the proof is valid.
-        ensure!(
-            verifying_key.verify(transition.function_name(), &inputs, transition.proof()),
-            "Transition is invalid"
-        );
-    }
+    // Retrieve the verifying key.
+    let (verifying_key, _) = verifying_keys
+        .get(transition.function_name())
+        .ok_or_else(|| anyhow!("missing verifying key"))?;
+    // Ensure the proof is valid.
+    ensure!(
+        verifying_key.verify(transition.function_name(), &inputs, transition.proof()),
+        "Transition is invalid"
+    );
     Ok(())
 }
 
