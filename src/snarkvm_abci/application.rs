@@ -246,8 +246,7 @@ impl SnarkVMApp {
     fn add_output_records(&self, transaction: &Transaction) -> Result<()> {
         if let Transaction::Execution { ref execution, .. } = transaction {
             execution
-                .iter()
-                .flat_map(|transition| transition.output_records())
+                .output_records()
                 .map(|(commitment, record)| self.records.add(*commitment, record.clone()))
                 .find(|result| result.is_err())
                 .unwrap_or_else(|| Ok(()))
@@ -268,18 +267,12 @@ impl SnarkVMApp {
                 vm::verify_deployment(deployment, rng)
             }
             Transaction::Execution { ref execution, .. } => {
-                let transition = execution.peek()?;
-
-                // TODO this assumes only one transition represents the program, is this correct?
-                let stored_keys = self.programs.get(transition.program_id())?;
+                let stored_keys = self.programs.get(execution.program_id())?;
                 // only verify if we have the program available
-                if let Some((program, keys)) = stored_keys {
-                    vm::verify_execution(execution, &program, &keys)
+                if let Some((_program, keys)) = stored_keys {
+                    vm::verify_execution(execution, &keys)
                 } else {
-                    bail!(format!(
-                        "Program {} does not exist",
-                        transition.program_id()
-                    ))
+                    bail!(format!("Program {} does not exist", execution.program_id()))
                 }
             }
         };
