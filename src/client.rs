@@ -161,7 +161,6 @@ fn generate_execution(
     let rng = &mut rand::thread_rng();
     let program_string = fs::read_to_string(path).unwrap();
 
-    // FIXME this should return a transition, not a snarkvm execution
     let transition = vm::generate_execution(
         &program_string,
         function_name,
