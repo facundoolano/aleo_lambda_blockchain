@@ -4,30 +4,67 @@ use clap::Parser;
 use lib::vm::{EncryptedRecord, Identifier, Record, Value};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::vec;
 
 /// Commands to manage accounts.
 #[derive(Debug, Parser)]
 pub enum Account {
-    /// Generates a new account.
     New,
     /// Fetches the records owned by the given account.
     Records,
     /// Fetches the records owned by the given account and calculates the final credits balance.
     Balance,
-    /// Commits an execution transaction to send a determined amount of credits to another account.
-    Credits {
-        /// The function name.
-        #[clap(value_parser)]
-        function: Identifier,
-        /// The function inputs.
-        #[clap(value_parser=parse_input_value)]
-        inputs: Vec<Value>,
-    },
     Decrypt {
         /// Value to decrypt
         #[clap(short, long)]
         value: String,
     },
+}
+
+#[derive(Debug, Parser)]
+pub enum Credits {
+    /// Transfer credtis to recipient_address from address that owns the input record
+    Transfer{
+        #[clap(value_parser=parse_input_value)]
+        input_record: Value,
+        #[clap(value_parser=parse_input_value)]
+        recipient_address: Value,
+        #[clap(value_parser=parse_input_value)]
+        amount: Value,
+    },
+    /// Split input record by amount
+    Split {
+        #[clap(value_parser=parse_input_value)]
+        input_record: Value,
+        #[clap(value_parser=parse_input_value)]
+        amount: Value,
+    },
+    /// Mint an amount of credits in recipient_address
+    Mint {
+        #[clap(value_parser=parse_input_value)]
+        recipient_address: Value,
+        #[clap(value_parser=parse_input_value)]
+        amount: Value,
+    }
+}
+
+
+impl Credits {
+    pub fn inputs(self) -> Vec<Value> {
+        match self {
+            Credits::Transfer { input_record, recipient_address, amount } => vec![input_record, recipient_address, amount],
+            Credits::Mint { recipient_address, amount } => vec![recipient_address, amount],
+            Credits::Split { input_record, amount } => vec![input_record, amount]
+        }
+    }
+
+    pub fn identifier(&self) -> Result<Identifier> {
+        match self {
+            Credits::Mint { .. } => Identifier::try_from("mint"),
+            Credits::Split { .. } => Identifier::try_from("split"),
+            Credits::Transfer { .. } => Identifier::try_from("transfer"),
+        }
+    }
 }
 
 /// Commands to manage program transactions.
@@ -74,7 +111,10 @@ pub enum Command {
     Program(Program),
     #[clap(name = "get")]
     Get(Get),
+    #[clap(subcommand)]
+    Credits(Credits)
 }
+
 /// Extends the snarkvm's default argument parsing to support using record ciphertexts as record inputs
 pub fn parse_input_value(input: &str) -> Result<Value> {
     // try parsing an encrypted record string

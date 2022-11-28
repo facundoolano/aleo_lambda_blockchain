@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use clap::Parser;
-use commands::{Account, Command, Get, Program};
+use commands::{Account, Command, Get, Program, Credits};
 use lib::{transaction::Transaction, vm, GetDecryptionResponse};
 use log::debug;
 use rand::thread_rng;
@@ -68,10 +68,10 @@ async fn run(command: Command, url: String) -> Result<String> {
             let path = account::Credentials::new()?.save()?;
             format!("Saved credentials to {}", path.to_string_lossy())
         }
-        Command::Account(Account::Credits { function, inputs }) => {
+        Command::Credits(credits) => {
             let credentials =
                 account::Credentials::load().map_err(|_| anyhow!("credentials not found"))?;
-            let transaction = generate_credits_execution(function, &inputs, &credentials)?;
+            let transaction = generate_credits_execution(credits.identifier()?, credits.inputs(), &credentials)?;
             broadcast_to_blockchain(&transaction, &url).await?;
             transaction.json()
         }
@@ -184,12 +184,12 @@ fn generate_execution(
 
 fn generate_credits_execution(
     function_name: vm::Identifier,
-    inputs: &[vm::Value],
+    inputs: Vec<vm::Value>,
     credentials: &account::Credentials,
 ) -> Result<Transaction> {
     let rng = &mut rand::thread_rng();
 
-    let execution = vm::credits_execution(function_name, inputs, &credentials.private_key, rng)?;
+    let execution = vm::credits_execution(function_name, &inputs, &credentials.private_key, rng)?;
 
     // using uuid here too for consistency, although in the case of Transaction::from_execution the additional fee is optional
     let id = uuid::Uuid::new_v4().to_string();
