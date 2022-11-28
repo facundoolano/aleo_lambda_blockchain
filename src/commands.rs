@@ -39,7 +39,7 @@ pub enum Credits {
         #[clap(value_parser=parse_input_value)]
         amount: Value,
     },
-    /// Combine to records into one
+    /// Combine two records into one
     Combine {
         #[clap(value_parser=parse_input_value)]
         first_record: Value,
