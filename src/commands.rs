@@ -24,7 +24,7 @@ pub enum Account {
 #[derive(Debug, Parser)]
 pub enum Credits {
     /// Transfer credtis to recipient_address from address that owns the input record
-    Transfer{
+    Transfer {
         #[clap(value_parser=parse_input_value)]
         input_record: Value,
         #[clap(value_parser=parse_input_value)]
@@ -45,16 +45,25 @@ pub enum Credits {
         first_record: Value,
         #[clap(value_parser=parse_input_value)]
         second_record: Value,
-    }
+    },
 }
-
 
 impl Credits {
     pub fn inputs(self) -> Vec<Value> {
         match self {
-            Credits::Transfer { input_record, recipient_address, amount } => vec![input_record, recipient_address, amount],
-            Credits::Combine { first_record, second_record } => vec![first_record, second_record],
-            Credits::Split { input_record, amount } => vec![input_record, amount]
+            Credits::Transfer {
+                input_record,
+                recipient_address,
+                amount,
+            } => vec![input_record, recipient_address, amount],
+            Credits::Combine {
+                first_record,
+                second_record,
+            } => vec![first_record, second_record],
+            Credits::Split {
+                input_record,
+                amount,
+            } => vec![input_record, amount],
         }
     }
 
@@ -112,7 +121,7 @@ pub enum Command {
     #[clap(name = "get")]
     Get(Get),
     #[clap(subcommand)]
-    Credits(Credits)
+    Credits(Credits),
 }
 
 /// Extends the snarkvm's default argument parsing to support using record ciphertexts as record inputs

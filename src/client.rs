@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use clap::Parser;
-use commands::{Account, Command, Get, Program, Credits};
+use commands::{Account, Command, Get, Program};
 use lib::{transaction::Transaction, vm, GetDecryptionResponse};
 use log::debug;
 use rand::thread_rng;
@@ -71,7 +71,8 @@ async fn run(command: Command, url: String) -> Result<String> {
         Command::Credits(credits) => {
             let credentials =
                 account::Credentials::load().map_err(|_| anyhow!("credentials not found"))?;
-            let transaction = generate_credits_execution(credits.identifier()?, credits.inputs(), &credentials)?;
+            let transaction =
+                generate_credits_execution(credits.identifier()?, credits.inputs(), &credentials)?;
             broadcast_to_blockchain(&transaction, &url).await?;
             transaction.json()
         }
