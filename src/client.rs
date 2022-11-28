@@ -17,7 +17,6 @@ mod commands;
 
 /// Default tendermint url
 const LOCAL_BLOCKCHAIN_URL: &str = "http://127.0.0.1:26657";
-const CREDITS_PATH: &str = "aleo/credits.aleo";
 
 #[derive(Debug, Parser)]
 #[clap()]
@@ -70,12 +69,11 @@ async fn run(command: Command, url: String) -> Result<String> {
             format!("Saved credentials to {}", path.to_string_lossy())
         }
         Command::Account(Account::Credits { function, inputs }) => {
-            let path = &std::path::Path::new(CREDITS_PATH);
-            let credentials = account::Credentials::load().map_err(|_| anyhow!("credentials not found"))?;
-            let transaction = generate_execution(path, function, &inputs, &credentials)?;
+            let credentials =
+                account::Credentials::load().map_err(|_| anyhow!("credentials not found"))?;
+            let transaction = generate_credits_execution(function, &inputs, &credentials)?;
             broadcast_to_blockchain(&transaction, &url).await?;
             transaction.json()
-
         }
         Command::Program(Program::Deploy { path }) => {
             let transaction = generate_deployment(&path)?;
@@ -177,6 +175,21 @@ fn generate_execution(
         &credentials.private_key,
         rng,
     )?;
+
+    // using uuid here too for consistency, although in the case of Transaction::from_execution the additional fee is optional
+    let id = uuid::Uuid::new_v4().to_string();
+
+    Ok(Transaction::Execution { id, execution })
+}
+
+fn generate_credits_execution(
+    function_name: vm::Identifier,
+    inputs: &[vm::Value],
+    credentials: &account::Credentials,
+) -> Result<Transaction> {
+    let rng = &mut rand::thread_rng();
+
+    let execution = vm::credits_execution(function_name, inputs, &credentials.private_key, rng)?;
 
     // using uuid here too for consistency, although in the case of Transaction::from_execution the additional fee is optional
     let id = uuid::Uuid::new_v4().to_string();
