@@ -38,10 +38,14 @@ impl ProgramStore {
 
             // Compute the 'credits.aleo' program stack.
             let deployment = generate_deployment(program_str, &mut rng)?;
+            let credits_program_keys = (
+                deployment.program().clone(),
+                deployment.verifying_keys().clone(),
+            );
             db_programs
                 .put(
                     deployment.program_id().to_string().into_bytes(),
-                    deployment.to_string().into_bytes(),
+                    bincode::serialize(&credits_program_keys)?,
                 )
                 .unwrap_or_else(|e| error!("failed to write to db {}", e));
         }
