@@ -39,12 +39,12 @@ pub enum Credits {
         #[clap(value_parser=parse_input_value)]
         amount: Value,
     },
-    /// Mint an amount of credits in recipient_address
-    Mint {
+    /// Combine to records into one
+    Combine {
         #[clap(value_parser=parse_input_value)]
-        recipient_address: Value,
+        first_record: Value,
         #[clap(value_parser=parse_input_value)]
-        amount: Value,
+        second_record: Value,
     }
 }
 
@@ -53,14 +53,14 @@ impl Credits {
     pub fn inputs(self) -> Vec<Value> {
         match self {
             Credits::Transfer { input_record, recipient_address, amount } => vec![input_record, recipient_address, amount],
-            Credits::Mint { recipient_address, amount } => vec![recipient_address, amount],
+            Credits::Combine { first_record, second_record } => vec![first_record, second_record],
             Credits::Split { input_record, amount } => vec![input_record, amount]
         }
     }
 
     pub fn identifier(&self) -> Result<Identifier> {
         match self {
-            Credits::Mint { .. } => Identifier::try_from("mint"),
+            Credits::Combine { .. } => Identifier::try_from("combine"),
             Credits::Split { .. } => Identifier::try_from("split"),
             Credits::Transfer { .. } => Identifier::try_from("transfer"),
         }
