@@ -2,7 +2,7 @@
 ///
 use std::{str::FromStr, sync::Arc};
 
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Ok, Result};
 use log::debug;
 use parking_lot::{lock_api::RwLock, RawRwLock};
 use rand::rngs::ThreadRng;
@@ -174,10 +174,6 @@ pub fn generate_execution(
 
     // we check this on the verify side (which will run in the blockchain)
     // repeating here just to fail early
-    ensure!(
-        !Program::is_coinbase(program.id(), &function_name),
-        "Coinbase functions cannot be called"
-    );
 
     execute(program, function_name, inputs, private_key, rng)
 }
@@ -199,32 +195,62 @@ fn execute(
     private_key: &PrivateKey,
     rng: &mut ThreadRng,
 ) -> Result<Vec<Transition>> {
+    let key = synthesize_key(&program, rng, function_name)?.unwrap();
+    execution(program, function_name, inputs, private_key, rng, key)
+}
+
+pub fn synthesize_key(
+    program: &Program,
+    rng: &mut ThreadRng,
+    function_name: Identifier,
+) -> Result<Option<VerifyingKey>> {
+    let stack = stack::new_init(program)?;
+
+    stack.synthesize_key::<AleoV0, _>(&function_name, rng)?;
+
+    let key = stack.verifying_keys.read().get(&function_name).cloned();
+
+    Ok(key)
+}
+
+pub fn execution(
+    program: Program,
+    function_name: Identifier,
+    inputs: &[Value],
+    private_key: &PrivateKey,
+    rng: &mut ThreadRng,
+    key: VerifyingKey,
+) -> Result<Vec<Transition>> {
+    ensure!(
+        !Program::is_coinbase(program.id(), &function_name),
+        "Coinbase functions cannot be called"
+    );
+
     ensure!(
         program.contains_function(&function_name),
         "Function '{function_name}' does not exist."
     );
-
-    let stack = stack::new_init(&program)?;
-
-    // Synthesize each proving and verifying key.
-    for function_name in program.functions().keys() {
-        stack.synthesize_key::<AleoV0, _>(function_name, rng)?
-    }
 
     debug!(
         "executing program {} function {} inputs {:?}",
         program, function_name, inputs
     );
 
-    let authorization = stack.authorize::<AleoV0, _>(private_key, function_name, inputs, rng)?;
+    let stack = stack::new_init(&program)?;
 
+    stack.insert_verifying_key(&function_name, key)?;
+
+    let authorization = stack.authorize::<AleoV0, _>(private_key, function_name, inputs, rng)?;
     let execution: Arc<RwLock<RawRwLock, _>> = Arc::new(RwLock::new(Execution::new()));
+
     // Execute the circuit.
     let _ = stack.execute_function::<AleoV0, _>(
         CallStack::execute(authorization, execution.clone())?,
         rng,
     )?;
+
     let execution = execution.read().clone();
+
     Ok(execution.into_transitions().collect())
 }
 

@@ -1,11 +1,14 @@
-use crate::vm::{self};
-use anyhow::Result;
+use crate::vm::{self, Identifier, Program, VerifyingKey};
+use anyhow::{anyhow, bail, Result};
 use log::debug;
 use rand;
 use serde::{Deserialize, Serialize};
+use snarkvm::parameters;
+use snarkvm::prelude::FromBytes;
 use snarkvm::prelude::{Ciphertext, Record, Testnet3};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 
 // Until we settle on one of the alternatives depending on performance, we have 2 variants for deployment transactions:
 // Transaction::Deployment generates verifying keys offline and sends them to the network along with the program
@@ -47,15 +50,21 @@ impl Transaction {
         inputs: &[vm::Value],
         private_key: &vm::PrivateKey,
     ) -> Result<Self> {
+        let (program, key) = if let Some(path) = path {
+            let program_string = fs::read_to_string(path).unwrap();
+            let program: vm::Program =
+                snarkvm::prelude::Program::from_str(&program_string).unwrap();
+            let verifying_key = get_keys(&program, function_name)?;
+            (program, verifying_key)
+        } else {
+            let verifying_key = get_credits_key(&function_name)?;
+            let program = Program::credits()?;
+            (program, verifying_key)
+        };
+
         let rng = &mut rand::thread_rng();
 
-        let transitions = if let Some(path) = path {
-            let program_string = fs::read_to_string(path).unwrap();
-
-            vm::generate_execution(&program_string, function_name, inputs, private_key, rng)?
-        } else {
-            vm::credits_execution(function_name, inputs, private_key, rng)?
-        };
+        let transitions = vm::execution(program, function_name, inputs, private_key, rng, key)?;
 
         let id = uuid::Uuid::new_v4().to_string();
 
@@ -136,5 +145,24 @@ impl std::fmt::Display for Transaction {
                 write!(f, "Execution({program_id},{id})")
             }
         }
+    }
+}
+
+fn get_credits_key(function_name: &Identifier) -> Result<VerifyingKey> {
+    let key = parameters::testnet3::TESTNET3_CREDITS_PROGRAM
+        .get(&function_name.to_string())
+        .ok_or_else(|| anyhow!("Circuit keys for credits.aleo/{function_name}' not found"))
+        .map(|(_, key)| key)?;
+
+    VerifyingKey::from_bytes_le(key)
+}
+
+fn get_keys(program: &Program, function_name: Identifier) -> Result<VerifyingKey> {
+    let rng = &mut rand::thread_rng();
+
+    if let Some(key) = vm::synthesize_key(program, rng, function_name)? {
+        Ok(key)
+    } else {
+        bail!("verifying key not found for identifier");
     }
 }
