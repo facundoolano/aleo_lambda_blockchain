@@ -63,12 +63,8 @@ fn program_validations() {
     execute_client_command(Some(home_path), &["program", "deploy", &program_path]).unwrap();
 
     // fail on trying to deploy same program with remote compilation
-    Command::cargo_bin("client")
-        .unwrap()
-        .env("ALEO_HOME", home_path)
-        .args(["program", "deploy", &program_path, "-c"])
-        .assert()
-        .success();
+    execute_client_command(Some(home_path), &["program", "deploy", &program_path, "-c"])
+        .unwrap_err();
 
     // fail on already deployed compiled locally
     execute_client_command(Some(home_path), &["program", "deploy", &program_path]).unwrap_err();
@@ -76,20 +72,10 @@ fn program_validations() {
     // deploy `hello.aleo` with remote compilation
     let (_program_file, program_path) = load_program("hello");
 
-    Command::cargo_bin("client")
-        .unwrap()
-        .env("ALEO_HOME", home_path)
-        .args(["program", "deploy", &program_path, "-c"])
-        .assert()
-        .success();
+    execute_client_command(Some(home_path), &["program", "deploy", &program_path, "-c"]).unwrap();
 
     // make sure remotely compiled program works by executing it
-    Command::cargo_bin("client")
-        .unwrap()
-        .env("ALEO_HOME", home_path)
-        .args(["program", "execute", &program_path, "hello", "1u32", "1u32"])
-        .assert()
-        .success();
+    execute_program(home_path, &program_path, HELLO_PROGRAM, &["1u32", "1u32"]).unwrap();
 
     // fail on unknown function
     execute_program(home_path, &program_path, UNKNOWN_PROGRAM, &["1u32", "1u32"]).unwrap_err();
