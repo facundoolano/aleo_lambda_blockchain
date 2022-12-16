@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+      - compile-for-aarch64
+
 jobs:
   build-binary:
     name: Build and push snarkvm_abci binary
