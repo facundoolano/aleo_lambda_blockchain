@@ -124,7 +124,6 @@ fn decrypt_records() {
 }
 
 #[test]
-#[ignore = "DeserializeAny is not supported by bincode"]
 fn token_transaction() {
     // Create two accounts: Alice and Bob
     let (_tempfile_alice, alice_home, alice_credentials) = &new_account();
@@ -157,7 +156,7 @@ fn token_transaction() {
         alice_home,
         &program_path,
         TRANSFER_FUNCTION,
-        &[record, bob_credentials.get("address").unwrap(), "5u64"],
+        &[&record, bob_credentials.get("address").unwrap(), "5u64"],
     )
     .unwrap();
     let transfer_transaction_id = get_transaction_id(&transaction).unwrap();
@@ -215,10 +214,10 @@ fn consume_records() {
     let record = get_encrypted_record(&transaction);
 
     // execute consume with output record
-    execute_program(home_path, &program_path, CONSUME_FUNCTION, &[record]).unwrap();
+    execute_program(home_path, &program_path, CONSUME_FUNCTION, &[&record]).unwrap();
 
     // execute consume with same output record, execution fails, no double spend
-    let error = execute_program(home_path, &program_path, CONSUME_FUNCTION, &[record]).unwrap_err();
+    let error = execute_program(home_path, &program_path, CONSUME_FUNCTION, &[&record]).unwrap_err();
 
     assert!(error.contains("is unknown or already spent"));
 
@@ -567,12 +566,12 @@ fn get_decrypted_record(transaction: &serde_json::Value) -> (&str, &str, &str) {
     (owner, gates, amount)
 }
 
-fn get_encrypted_record(transaction: &serde_json::Value) -> &str {
+fn get_encrypted_record(transaction: &serde_json::Value) -> String {
+    println!("{:?}", transaction["Execution"]["transitions"][0]["outputs"][0]);
     transaction
-        .pointer("/Execution/transitions/0/outputs/0/value")
+        .pointer("/Execution/transitions/0/outputs/0")
         .unwrap()
-        .as_str()
-        .unwrap()
+        .to_string()
 }
 
 fn assert_balance(path: &str, expected: u64) -> Result<(), retry::Error<String>> {

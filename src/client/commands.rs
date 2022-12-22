@@ -326,13 +326,11 @@ fn parse_input_value(input: &str) -> Result<vm::UserInputValueType> {
     }
 
     // try parsing a jsonified plaintext record
-    if let Ok(record) = serde_json::from_str::<vm::Record>(input) {
-        return Ok(vm::UserInputValueType::Record(vm::Record {
-            owner: record.owner,
-            gates: record.gates,
-            entries: record.entries,
-            nonce: record.nonce,
-        }));
+    if let Ok(record) = serde_json::from_str::<vm::VariableType>(input) {
+        match record {
+            vm::VariableType::Record(_, record) => return Ok(vm::UserInputValueType::Record(record)),
+            _ => bail!("Tried to parse a jsonified plaintext record with a non record type")
+        }
     }
     // otherwise fallback to parsing a snarkvm literal
     vm::UserInputValueType::try_from(input.to_string())

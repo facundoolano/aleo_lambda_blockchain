@@ -9,7 +9,7 @@ pub use vmtropy::helpers::to_address;
 use vmtropy::jaleo::RecordEntriesMap;
 pub use vmtropy::jaleo::{get_credits_key, mint_credits};
 pub use vmtropy::jaleo::{Itertools, UserInputValueType};
-use vmtropy::VariableType;
+pub use vmtropy::VariableType;
 
 const MAX_INPUTS: usize = 8;
 const MAX_OUTPUTS: usize = 8;
