@@ -1,4 +1,4 @@
-.PHONY: tendermint reset abci build cli genesis tendermint_config testnet tendermint_install
+.PHONY: tendermint reset abci build cli genesis tendermint_config testnet tendermint_install node_abci
 
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
 
@@ -63,6 +63,14 @@ reset: bin/tendermint
 # run the snarkvm tendermint application
 abci:
 	cargo run --release --bin snarkvm_abci
+
+# run both the abci application and the tendermint node	
+# assumes config for each node has been done previously
+node_abci: NODE:=0
+node_abci: 
+	bin/tendermint node --home ./testnet/node$(NODE)/config/ --consensus.create_empty_blocks_interval="90s" &
+	cd ./testnet/node$(NODE)
+	cargo run --release --bin snarkvm_abci -- --port 26$(NODE)58 &
 
 # run tests on release mode to ensure there is no extra printing to stdout
 test:
