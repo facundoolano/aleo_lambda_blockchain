@@ -159,7 +159,7 @@ fn decrypt_records() {
 fn token_transaction() {
     // Create two accounts: Alice and Bob
     let (_tempfile_alice, alice_home, alice_credentials) = &new_account();
-    let (_tempfile_bob, bob_home, bob_credentials) = &new_account();
+    let (_tempfile_bob, _bob_home, bob_credentials) = &new_account();
 
     // Load token program with Alice credentials
     let (_program_file, program_path, _) = load_program("token");
@@ -225,7 +225,7 @@ fn token_transaction() {
             // view key.
 
             // // Get, decrypt and assert correctness of Bob output record: Should have 5u64.private in the amount variable
-            // let transaction = retry_command(bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
+            // let transaction = retry_command(_bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
             // let (owner, _gates, amount) = get_decrypted_record(&transaction);
             // assert_eq!(
             //     owner,
@@ -234,7 +234,7 @@ fn token_transaction() {
             // assert_eq!(amount, "5u64");
         } else if #[cfg(feature = "snarkvm_backend")] {
             // Get, decrypt and assert correctness of Bob output record: Should have 5u64.private in the amount variable
-            let transaction = retry_command(bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
+            let transaction = retry_command(_bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
             let (owner, _gates, amount) = get_decrypted_record(&transaction);
             assert_eq!(
                 owner,
