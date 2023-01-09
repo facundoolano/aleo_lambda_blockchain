@@ -274,7 +274,9 @@ fn key_exists_or_fails(db: &rocksdb::DB, key: &Key) -> bool {
 mod tests {
     use std::fs;
 
+    #[allow(unused_imports)]
     use indexmap::IndexMap;
+    #[allow(unused_imports)]
     use lib::vm::{compute_serial_number, PrivateKey, Record, ViewKey};
     type PublicRecord = lib::vm::Record;
 
@@ -324,9 +326,9 @@ mod tests {
         let store = RecordStore::new(&db_path("records2")).unwrap();
 
         let (record, commitment, _) = new_record();
-        store.add(commitment.clone(), record.clone()).unwrap();
+        store.add(commitment, record.clone()).unwrap();
         let msg = store
-            .add(commitment.clone(), record)
+            .add(commitment, record)
             .unwrap_err()
             .root_cause()
             .to_string();
@@ -334,10 +336,10 @@ mod tests {
         store.commit().unwrap();
 
         let (record, commitment, _) = new_record();
-        store.add(commitment.clone(), record.clone()).unwrap();
+        store.add(commitment, record.clone()).unwrap();
         store.commit().unwrap();
         let msg = store
-            .add(commitment.clone(), record)
+            .add(commitment, record)
             .unwrap_err()
             .root_cause()
             .to_string();

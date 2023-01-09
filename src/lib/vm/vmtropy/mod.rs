@@ -55,7 +55,7 @@ pub fn verify_deployment(program: &Program, verifying_keys: VerifyingKeyMap) -> 
             )
         }
         // Ensure the function name with the verifying key is correct.
-        if &candidate_name != &function.name() {
+        if candidate_name != function.name() {
             bail!(
                 "The verifier key is '{candidate_name}', but the function name is '{}'",
                 function.name()
@@ -221,7 +221,7 @@ pub fn execution(
 
     let transition = Transition {
         program_id: *program.id(),
-        function_name: function_name,
+        function_name,
         inputs: inputs.into_values().collect::<Vec<VariableType>>(),
         outputs: outputs.into_values().collect::<Vec<VariableType>>(),
         proof: encoded_proof,

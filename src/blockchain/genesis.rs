@@ -73,6 +73,7 @@ fn main() -> Result<()> {
 
         println!("Generating record for {aleo_address}");
         // NOTE: using a hardcoded seed, not for production!
+        #[allow(unused_mut)]
         let mut record = vm::mint_record(
             "credits.aleo",
             "credits",

@@ -333,7 +333,7 @@ impl SnarkVMApp {
         transaction
             .output_records()
             .iter()
-            .map(|(commitment, record)| self.records.add(commitment.clone(), record.clone()))
+            .map(|(commitment, record)| self.records.add(*commitment, record.clone()))
             .find(|result| result.is_err())
             .unwrap_or(Ok(()))
     }
@@ -347,7 +347,7 @@ impl SnarkVMApp {
                 ..
             } => {
                 ensure!(
-                    !self.programs.exists(&program.id()),
+                    !self.programs.exists(program.id()),
                     format!("Program already exists: {}", program.id())
                 );
 
@@ -380,7 +380,7 @@ impl SnarkVMApp {
 
     /// Check the given execution transition with the verifying keys from the program store
     fn verify_transition(&self, transition: &vm::Transition) -> Result<()> {
-        let stored_keys = self.programs.get(&transition.program_id())?;
+        let stored_keys = self.programs.get(transition.program_id())?;
 
         // only verify if we have the program available
         if let Some((_program, keys)) = stored_keys {
@@ -400,7 +400,7 @@ impl SnarkVMApp {
             ..
         } = transaction
         {
-            self.programs.add(&program.id(), program, verifying_keys)?
+            self.programs.add(program.id(), program, verifying_keys)?
         }
         Ok(())
     }

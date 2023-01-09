@@ -6,6 +6,7 @@ use lib::program_file::ProgramFile;
 use lib::query::AbciQuery;
 use lib::transaction::Transaction;
 use lib::vm::{self, compute_serial_number};
+#[allow(unused_imports)]
 use lib::vm::{EncryptedRecord, ProgramID};
 use log::debug;
 use serde_json::json;
@@ -451,7 +452,7 @@ async fn run_credits_command(
 fn parse_input_value(input: &str) -> Result<vm::UserInputValueType> {
     // try parsing an encrypted record string
     if input.starts_with("record") {
-        return parse_input_record(&input);
+        return parse_input_record(input);
     }
 
     // %account is a syntactic sugar for current user address
@@ -466,7 +467,7 @@ fn parse_input_value(input: &str) -> Result<vm::UserInputValueType> {
         return Ok(vm::UserInputValueType::Record(record));
     }
     // otherwise fallback to parsing a snarkvm literal
-    vm::UserInputValueType::from_str(&input.to_string())
+    vm::UserInputValueType::from_str(input)
 }
 
 pub fn parse_input_record(input: &str) -> Result<vm::UserInputValueType> {
@@ -502,9 +503,9 @@ async fn get_records(
         .filter_map(|(commitment, ciphertext)| {
             ciphertext
                 .decrypt(&credentials.view_key)
-                .map(|decrypted_record| (commitment.clone(), ciphertext, decrypted_record))
+                .map(|decrypted_record| (commitment, ciphertext, decrypted_record))
                 .ok()
-                .filter(|(_, ciphertext, _decrypted_record)| {
+                .filter(|(_, _ciphertext, _decrypted_record)| {
                     let serial_number = compute_serial_number(credentials.private_key, commitment);
                     #[cfg(feature = "snarkvm_backend")]
                     return serial_number.is_ok()
@@ -512,7 +513,7 @@ async fn get_records(
                     #[cfg(feature = "vmtropy_backend")]
                     return serial_number.is_ok()
                         && !spent_records.contains(&serial_number.unwrap())
-                        && ciphertext.is_owner(&credentials.address, &credentials.view_key);
+                        && _ciphertext.is_owner(&credentials.address, &credentials.view_key);
                 })
         })
         .collect();
