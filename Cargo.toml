@@ -60,8 +60,9 @@ base64 = "0.20.0"
 sha3 = "0.10.6"
 
 [dependencies.vmtropy]
-git = "https://github.com/lambdaclass/VMtropy.git"
-branch = "integration"
+# git = "https://github.com/lambdaclass/VMtropy.git"
+# branch = "integration"
+path = "../VMtropy"
 optional = true
 
 [dependencies.snarkvm]
@@ -74,6 +75,7 @@ assert_fs = "1.0.9"
 assert_cmd = "2.0.6"
 retry = "2.0.0"
 ctor = "0.1.23"
+cfg-if = "1"
 
 [features]
 default = ["vmtropy_backend"]
