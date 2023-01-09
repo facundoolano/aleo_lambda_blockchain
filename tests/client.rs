@@ -156,7 +156,6 @@ fn decrypt_records() {
 }
 
 #[test]
-#[ignore = "DeserializeAny is not supported by bincode"]
 fn token_transaction() {
     // Create two accounts: Alice and Bob
     let (_tempfile_alice, alice_home, alice_credentials) = &new_account();
@@ -198,25 +197,57 @@ fn token_transaction() {
     let transaction = retry_command(alice_home, &["get", transfer_transaction_id, "-d"]).unwrap();
     let (owner, _gates, amount) = get_decrypted_record(&transaction);
 
-    assert_eq!(
-        owner,
-        format!("{}.private", alice_credentials.get("address").unwrap())
-    );
-    assert_eq!(amount, "5u64.private");
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "vmtropy_backend")] {
+            assert_eq!(
+                owner,
+                format!("{}", alice_credentials.get("address").unwrap())
+            );
+            assert_eq!(amount, "5u64");
+        } else if #[cfg(feature = "snarkvm_backend")] {
+            assert_eq!(
+                owner,
+                format!("{}.private", alice_credentials.get("address").unwrap())
+            );
+            assert_eq!(amount, "5u64.private");
+        } else {
+            compile_error!("You must use a backend");
+        }
+    }
 
-    // Get, decrypt and assert correctness of Bob output record: Should have 5u64.private in the amount variable
-    let transaction = retry_command(bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
-    let (owner, _gates, amount) = get_decrypted_record(&transaction);
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "vmtropy_backend")] {
+            // Bob is not able to decrypt his records atm because his records
+            // are being encrypted with Alice's view key.
+            // The difference here between this and snarkVM's is that in snarkVM
+            // encryption is asymmetric and records could be encrypted using
+            // the address. In VMtropy records are encrypted using only the
+            // view key.
 
-    assert_eq!(
-        owner,
-        format!("{}.private", bob_credentials.get("address").unwrap())
-    );
-    assert_eq!(amount, "5u64.private");
+            // // Get, decrypt and assert correctness of Bob output record: Should have 5u64.private in the amount variable
+            // let transaction = retry_command(bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
+            // let (owner, _gates, amount) = get_decrypted_record(&transaction);
+            // assert_eq!(
+            //     owner,
+            //     format!("{}", bob_credentials.get("address").unwrap())
+            // );
+            // assert_eq!(amount, "5u64");
+        } else if #[cfg(feature = "snarkvm_backend")] {
+            // Get, decrypt and assert correctness of Bob output record: Should have 5u64.private in the amount variable
+            let transaction = retry_command(bob_home, &["get", transfer_transaction_id, "-d"]).unwrap();
+            let (owner, _gates, amount) = get_decrypted_record(&transaction);
+            assert_eq!(
+                owner,
+                format!("{}.private", bob_credentials.get("address").unwrap())
+            );
+            assert_eq!(amount, "5u64.private");
+        } else {
+            compile_error!("You must use a backend");
+        }
+    }
 }
 
 #[test]
-#[ignore = "Literal operands are not yet supported in VMtropy"]
 fn consume_records() {
     // new account41
     let (_acc_file, home_path, _) = &new_account();
