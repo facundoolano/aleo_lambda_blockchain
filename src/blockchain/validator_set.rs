@@ -162,7 +162,7 @@ impl ValidatorSet {
                     self.current_votes.get(address).unwrap_or(&0)
                 );
 
-                let record = vm::mint_record(
+                let mut record = vm::mint_record(
                     "credits.aleo",
                     "credits",
                     &validator.aleo_view_key,
@@ -170,6 +170,16 @@ impl ValidatorSet {
                     self.current_height,
                 )
                 .expect("Couldn't mint credit records for reward");
+
+                cfg_if::cfg_if! {
+                    if #[cfg(feature = "vmtropy_backend")] {
+                        let mut prefixed_serialized_record = "record".to_owned();
+                        let serialized = hex::encode(record.1.to_string().as_bytes());
+                        prefixed_serialized_record.push_str(&serialized);
+                        record.1.ciphertext = prefixed_serialized_record;
+                    }
+                }
+
                 output_records.push(record);
             }
 
@@ -327,7 +337,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Check with consensus team"]
     fn rewards_are_deterministic() {
         // create 2 different validators with the same amounts
         let tmint1 = "vM+mkdPMvplfxO7wM57z4FXy0TlBC2Onb+MaqcXE8ig=";

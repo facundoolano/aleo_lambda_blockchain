@@ -44,7 +44,10 @@ pub enum Credits {
         input_record: vm::UserInputValueType,
         #[clap(value_parser=parse_input_value)]
         recipient_address: vm::UserInputValueType,
+        #[cfg(feature = "snarkvm_backend")]
         #[clap(value_parser=parse_input_value)]
+        amount: u64,
+        #[cfg(feature = "vmtropy_backend")]
         amount: u64,
         /// Amount of gates to pay as fee for this execution. If omitted not fee is paid.
         #[clap(long)]
@@ -448,10 +451,6 @@ async fn run_credits_command(
 fn parse_input_value(input: &str) -> Result<vm::UserInputValueType> {
     // try parsing an encrypted record string
     if input.starts_with("record") {
-        #[cfg(feature = "vmtropy_backend")]
-        return parse_input_record(&input[6..]);
-
-        #[cfg(feature = "snarkvm_backend")]
         return parse_input_record(&input);
     }
 
@@ -472,7 +471,7 @@ fn parse_input_value(input: &str) -> Result<vm::UserInputValueType> {
 
 pub fn parse_input_record(input: &str) -> Result<vm::UserInputValueType> {
     #[cfg(feature = "vmtropy_backend")]
-    let encrypted_record = EncryptedRecord::try_from(&(hex::decode(input)?.to_vec()))?;
+    let encrypted_record = EncryptedRecord::try_from(&(hex::decode(&input[6..])?.to_vec()))?;
 
     #[cfg(feature = "snarkvm_backend")]
     let encrypted_record = vm::EncryptedRecord::from_str(input)?;
@@ -484,7 +483,7 @@ pub fn parse_input_record(input: &str) -> Result<vm::UserInputValueType> {
 }
 
 /// Retrieves all records from the blockchain, and only those that are correctly decrypted
-/// (i.e, are owned by the passed credentials) and have not been spent are returned
+/// (i.e, are owned by the ssed credentials) and have not been spent are returned
 async fn get_records(
     credentials: &account::Credentials,
     url: &str,

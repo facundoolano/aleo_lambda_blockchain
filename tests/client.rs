@@ -96,7 +96,6 @@ fn program_validations() {
 }
 
 #[test]
-#[ignore = "Literal operands are not yet supported in VMtropy"]
 fn decrypt_records() {
     let (_acc_file, home_path, credentials) = &new_account();
     let (_program_file, program_path, _) = load_program(TOKEN_PROGRAM);
@@ -122,9 +121,21 @@ fn decrypt_records() {
     let transaction = retry_command(home_path, &["get", transaction_id, "-d"]).unwrap();
     let (owner, gates, amount) = get_decrypted_record(&transaction);
 
-    assert_eq!(amount.to_string(), "1u64.private");
-    assert_eq!(gates.to_string(), "0u64.private");
-    assert_eq!(owner.to_string(), format!("{address}.private"));
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "vmtropy_backend")] {
+            let expected_amount = "1u64";
+            let expected_gates = "0u64";
+            let expected_owner = format!("{address}");
+        } else if #[cfg(feature = "snarkvm_backend")] {
+            let expected_amount = "1u64.private";
+            let expected_gates = "0u64.private";
+            let expected_owner =  format!("{address}.private");
+        }
+    }
+
+    assert_eq!(amount.to_string(), expected_amount);
+    assert_eq!(gates.to_string(), expected_gates);
+    assert_eq!(owner.to_string(), expected_owner);
 
     // dry run contains decrypted records
     let output = execute_program(
@@ -340,11 +351,24 @@ fn validate_credits() {
 }
 
 #[test]
-#[ignore = "Check with consensus team"]
+// TODO: Remove this feature flag when we fix encryption on the VMtropy side
+#[cfg(feature = "snarkvm_backend")]
 fn transfer_credits() {
     let validator_home = validator_account_path();
 
     // assuming the first record has more than 10 credits
+    #[cfg(feature = "vmtropy_backend")]
+    let record = client_command(&validator_home, &["account", "records"])
+        .unwrap()
+        .pointer("/1/ciphertext")
+        .unwrap()
+        .get("ciphertext")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    #[cfg(feature = "snarkvm_backend")]
     let record = client_command(&validator_home, &["account", "records"])
         .unwrap()
         .pointer("/0/ciphertext")
@@ -373,7 +397,8 @@ fn transfer_credits() {
 }
 
 #[test]
-#[ignore = "Check with consensus team"]
+// TODO: Remove this feature flag when we properly implement encryption on the VMtropy side
+#[cfg(feature = "snarkvm_backend")]
 fn transaction_fees() {
     // create a test account
     let (_tempfile, receiver_home, credentials) = &new_account();
@@ -389,9 +414,22 @@ fn transaction_fees() {
 
     // transfer a known amount of credits to the test account
     let validator_home = validator_account_path();
+
+    #[cfg(feature = "snarkvm_backend")]
     let record = client_command(&validator_home, &["account", "records"])
         .unwrap()
         .pointer("/1/ciphertext")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    #[cfg(feature = "vmtropy_backend")]
+    let record = client_command(&validator_home, &["account", "records"])
+        .unwrap()
+        .pointer("/1/ciphertext")
+        .unwrap()
+        .get("ciphertext")
         .unwrap()
         .as_str()
         .unwrap()
@@ -520,7 +558,8 @@ fn transaction_fees() {
 }
 
 #[test]
-#[ignore = "Check with consensus team"]
+// TODO: Fix this when we properly implement encryption on the VMtropy side
+#[cfg(feature = "snarkvm_backend")]
 fn staking() {
     // create a test account
     let (_tempfile, receiver_home, credentials) = &new_account();
@@ -528,9 +567,21 @@ fn staking() {
     // transfer a known amount of credits to the test account
     let validator_home = validator_account_path();
     let tendermint_validator = validator_address(&validator_home);
+    #[cfg(feature = "snarkvm_backend")]
     let record = client_command(&validator_home, &["account", "records"])
         .unwrap()
         .pointer("/2/ciphertext")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    #[cfg(feature = "vmtropy_backend")]
+    let record = client_command(&validator_home, &["account", "records"])
+        .unwrap()
+        .pointer("/2/ciphertext")
+        .unwrap()
+        .get("ciphertext")
         .unwrap()
         .as_str()
         .unwrap()
