@@ -61,9 +61,8 @@ sha3 = "0.10.6"
 cfg-if = "1"
 
 [dependencies.vmtropy]
-# git = "https://github.com/lambdaclass/VMtropy.git"
-# branch = "integration"
-path = "../VMtropy"
+git = "ssh://git@github.com/lambdaclass/VMtropy.git"
+branch = "integration"
 optional = true
 
 [dependencies.snarkvm]
