@@ -322,13 +322,14 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
     fn no_double_add_record() {
         let store = RecordStore::new(&db_path("records2")).unwrap();
 
         let (record, commitment, _) = new_record();
-        store.add(commitment, record.clone()).unwrap();
+        store.add(commitment.clone(), record.clone()).unwrap();
         let msg = store
-            .add(commitment, record)
+            .add(commitment.clone(), record)
             .unwrap_err()
             .root_cause()
             .to_string();
@@ -336,10 +337,10 @@ mod tests {
         store.commit().unwrap();
 
         let (record, commitment, _) = new_record();
-        store.add(commitment, record.clone()).unwrap();
+        store.add(commitment.clone(), record.clone()).unwrap();
         store.commit().unwrap();
         let msg = store
-            .add(commitment, record)
+            .add(commitment.clone(), record)
             .unwrap_err()
             .root_cause()
             .to_string();

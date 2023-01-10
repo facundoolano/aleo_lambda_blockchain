@@ -498,12 +498,13 @@ async fn get_records(
     let spent_records: HashSet<vm::Field> = bincode::deserialize(&get_spent_records_response)?;
 
     debug!("Records: {:?}", records);
+    #[allow(clippy::clone_on_copy)]
     let records = records
         .into_iter()
         .filter_map(|(commitment, ciphertext)| {
             ciphertext
                 .decrypt(&credentials.view_key)
-                .map(|decrypted_record| (commitment, ciphertext, decrypted_record))
+                .map(|decrypted_record| (commitment.clone(), ciphertext, decrypted_record))
                 .ok()
                 .filter(|(_, _ciphertext, _decrypted_record)| {
                     let serial_number = compute_serial_number(credentials.private_key, commitment);

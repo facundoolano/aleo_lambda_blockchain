@@ -330,10 +330,11 @@ impl SnarkVMApp {
 
     /// Add the tranasction output records as unspent in the record store.
     fn add_output_records(&self, transaction: &Transaction) -> Result<()> {
+        #[allow(clippy::clone_on_copy)]
         transaction
             .output_records()
             .iter()
-            .map(|(commitment, record)| self.records.add(*commitment, record.clone()))
+            .map(|(commitment, record)| self.records.add(commitment.clone(), record.clone()))
             .find(|result| result.is_err())
             .unwrap_or(Ok(()))
     }
