@@ -35,7 +35,7 @@ The consensus/blockchain engine has been built with [Tendermint Core](https://do
 
 ## Project structure
 
-* [aleo/](./aleo): example aleo instruction programs
+* [aleo/](./aleo): example Aleo instruction programs
 * [src/client/](./src/client/): CLI program to interact with the VM and the blockchain (e.g. create an account, deploy and execute programs)
 * [src/blockchain/](./src/blockchain/): Implements the [Application Blockchain Interface](https://docs.tendermint.com/v0.34/introduction/what-is-tendermint.html#abci-overview) (ABCI) to connect the aleo specific logic (e.g. program proof verification) to the Tendermint Core infrastructure.
 * [src/blockchain/genesis.rs](./src/blockchain/genesis.rs): Implements a helper program that generates JSON files that represent the genesis state for the ABCI app (which Tendermint requires).
@@ -384,7 +384,7 @@ Adding a non-validator node with Tendermint Core is simple: You need to provide 
 You can also just copy the whole file if every other setting such as sockets, timeouts, etc. are expected to be default. Once this is done, you can run `bin/tendermint node` to run the node code on one terminal and `make abci` on another to make sure the ABCI runs alongside Tendermint. If all is well configured, you should see the Tendermint node connecting to the ABCI, succesfully parsing the `genesis.json` and replaying the transactions that it gets from the `persistent_peers`. 
 If reading the logs from the remote logs, you will also see the new node's connection incoming. You can read more about the config on the [Tendermint docs](https://github.com/tendermint/tendermint/blob/release/v0.34.13/docs/tendermint-core/using-tendermint.md#adding-a-non-validator).
 
-In order to transform the node into validator, we need to give it voting power. This is implemented on our ABCI's [`EndBlock`] hook(https://github.com/tendermint/tendermint/blob/main/spec/abci/abci.md#endblock). 
+In order to transform the node into validator, we need to give it voting power. This is implemented on our ABCI's [`EndBlock` hook](https://github.com/tendermint/tendermint/blob/main/spec/abci/abci.md#endblock). 
 To update its voting power, you need to stake credits to its public key (an Ed25519 public key located in `.tendermint/config/priv_validator_key.json`), which means you need to transfer valid credits to the address associated with the new node (usually located in `/.tendermint` if the config was initialised with the make targets, but it can be any valid Aleo address). An example stake transaction looks like this:
 
 ```shell
